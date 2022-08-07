@@ -10,6 +10,7 @@ CafeScan v0.0 ( https://github.com/Gomez0015 )
 Usage: CafeScan [Options]
 
 MISC:
+	
 	-h, --help # Help Menu
 
 TARGET SPECIFICATION:
