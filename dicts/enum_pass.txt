@@ -1,0 +1,9 @@
+anonymous
+admin
+administrator
+password
+password123
+guest
+root
+toor
+anon
