@@ -188,7 +188,7 @@ def scanAggressively():
 										print(f'-	{line} ( GET /{dir} )')
 									# elif 'HTTP/1.1' in line:
 									# 	print(f'-	{line} ( GET /{dir} )')
-						if('SMB' in payload):
+						elif('SMB' in payload):
 							smbListShares()
 						else:
 							s.send(str.encode(payload))
