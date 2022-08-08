@@ -64,7 +64,7 @@ def printHelp():
 def main(argv):
 	global ports
 
-	print('CafeScan v0.0 ( https://github.com/Gomez0015 )\n')
+	print('CafeScan v0.1 ( https://github.com/Gomez0015 )\n')
 
 	try:
 		# Define CLI arguments
