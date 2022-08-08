@@ -1,5 +1,6 @@
 robots.txt
 .htaccess
+fuel
 wp-admin
 wp-login
 secret
@@ -33,17 +34,8 @@ MAINTAINERS.txt
 INSTALL.pgsql.txt
 UPGRADE.txt
 CHANGELOG.txt
-?q=admin/
-?q=node/add/
-?q=search/
-?q=comment/reply/
-?q=user/password/
-?q=user/register/
-?q=user/login/
 search
-?q=filter/tips/
 INSTALL.sqlite.txt
-?q=user/logout/
 _services/
 tncms/webservice/
 tncms/user/
@@ -66,10 +58,6 @@ marketplace/*action=srch
 content/tncms/ads/
 content/tncms/live/
 cgi-bin/
-*?print
-*?mode=print
-*?mode=comments
-*?mode=story
 classifieds/*?
 calendar/search/
 images/
@@ -96,7 +84,6 @@ classifieds/service/*?
 account/
 topic/?
 checkout/
-</pre></body></html>
 media/
 admin
 core/

@@ -7,9 +7,11 @@
 
 #!/usr/bin/python
 
-import sys, getopt, socket, concurrent.futures, os, time, smb
+import sys, getopt, socket, concurrent.futures, os, time, smb, requests, requests_futures
 from datetime import datetime
+from concurrent.futures import as_completed
 from smb.SMBConnection import SMBConnection
+from requests_futures.sessions import FuturesSession
 
 socket.setdefaulttimeout(15)
 
@@ -20,12 +22,15 @@ aggressivePayloads = { 'HTTP': ['GET /enum_dir HTTP/1.1\r\nHost: www.host.com\r\
 enum_dirList = open('./dicts/enum_dir.txt', "r").read().splitlines()
 enum_userList = open('./dicts/enum_user.txt', "r").read().splitlines()
 enum_passList = open('./dicts/enum_pass.txt', "r").read().splitlines()
+enum_dirListBig = open('./dicts/enum_dirBig.txt', "r").read().splitlines()
 
 # User Options
 grabBanners = False
 aggressiveScan = False
+webDirScan = False
 target = ''
 ports = ''
+protocol = ''
 
 class bcolors:
     HEADER = '\033[95m'
@@ -51,6 +56,7 @@ def printHelp():
 	print(f'\n{bcolors.UNDERLINE}SCAN SPECIFICATION:{bcolors.ENDC}')
 	print(f'	{bcolors.OKBLUE}--gb, --grab-banners {bcolors.ENDC}# Try To Grab Service Banners')
 	print(f'	{bcolors.OKBLUE}--sa, --scan-aggressive {bcolors.ENDC}# Scan Aggressively')
+	print(f'	{bcolors.OKBLUE}--sw, --scan-webdir {bcolors.ENDC}# Scan Web Directories/Paths')
 	sys.exit()
 
 # Main function
@@ -61,7 +67,7 @@ def main(argv):
 
 	try:
 		# Define CLI arguments
-		opts, args = getopt.getopt(argv,"hi:at",["help", "ip-address=","all-ports","top-ports", "grab-banners", "gb", "sa"])
+		opts, args = getopt.getopt(argv,"hi:at",["help", "ip-address=","all-ports","top-ports", "grab-banners", "gb", "sa", "scan-webdir", "sw"])
 	except getopt.GetoptError:
 		printHelp()
 
@@ -87,6 +93,10 @@ def main(argv):
 		elif opt in ("--sa", "--scan-aggressive"):
 			global aggressiveScan
 			aggressiveScan = True
+
+		elif opt in ("--sw", "--scan-webdir"):
+			global webDirScan
+			webDirScan = True
 
 	if(len(target) == 0):
 		printHelp()
@@ -151,18 +161,41 @@ def startScan():
 		scanAggressively()
 		print("-" * 50)
 
-def scanAggressively():
+	if(webDirScan == True):
+		print(f"{bcolors.UNDERLINE}Starting Web Directory/Path Scan{bcolors.ENDC}\n")
+		global protocol
+		protocol = 'http'
+		scanWebDir()
+		print("-" * 50)
+
+def scanWebDir():
+
 	loader = loading_cursor()
 
-	for port in openPorts:
+	session = FuturesSession()
+
+	futures=[session.get(f'{protocol}://{target}/{dir}') for dir in enum_dirListBig]
+
+	for future in as_completed(futures):
 
 		sys.stdout.write(next(loader))
 		sys.stdout.flush()
 		sys.stdout.write('\b')
 
+		resp = future.result()
+		if resp.status_code == 200 or resp.status_code == 403 or resp.status_code == 301:
+			resp.request.url = resp.request.url.replace(protocol + '://' + target + '/', '')
+			print(f'-	{protocol.upper()} {bcolors.OKGREEN + str(resp.status_code) if resp.status_code == 200 else bcolors.WARNING + str(resp.status_code)}{bcolors.ENDC} ( GET /{resp.request.url} )')
+
+def scanAggressively():
+	loader = loading_cursor()
+
+	for port in openPorts:
+
 		if (aggressivePayloads.get(services.get(port, 'none'), 'none') != 'none'):
 			payloads = aggressivePayloads.get(services.get(port))
 
+			sys.stdout.write('\033[A')
 			print(f'Port {bcolors.BOLD + str(port) + bcolors.ENDC} | {bcolors.OKBLUE + services.get(port) + bcolors.ENDC}')
 			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 			       
@@ -171,23 +204,25 @@ def scanAggressively():
 					s.connect((target, port))
 
 					for payload in payloads:
+						
+						sys.stdout.write(next(loader))
+						sys.stdout.flush()
+						sys.stdout.write('\b')
+
 						payload = payload.replace("www.host.com", target)
 
 						if('enum_dir' in payload):
 							for dir in enum_dirList:
-								dirPayload = payload.replace('enum_dir', dir)
 
-								s.send(str.encode(dirPayload))
-								response = s.recv(1024).decode("utf-8").strip().replace("\n", "\n-	").replace("\r", "")
-								dirPayload = dirPayload.replace("\n", " ").replace("\r", "")
-								
-								for line in response.split("\n"):
-									if 'HTTP/1.1 200 OK' in line:
-										print(f'-	{line} ( GET /{dir} )')
-									elif 'HTTP/1.1 301 Moved Permanently' in line:
-										print(f'-	{line} ( GET /{dir} )')
-									# elif 'HTTP/1.1' in line:
-									# 	print(f'-	{line} ( GET /{dir} )')
+								sys.stdout.write(next(loader))
+								sys.stdout.flush()
+								sys.stdout.write('\b')
+
+								res = requests.get(f'http://{target}/{dir}')
+
+								if res.status_code == 200 or res.status_code == 403 or res.status_code == 301:
+									print(f'-	HTTP/1.1 {res.status_code} ( GET /{dir} )')
+
 						elif('SMB' in payload):
 							smbListShares()
 						else:
@@ -271,4 +306,12 @@ def loading_cursor():
             yield cursor
 
 if __name__ == "__main__":
-	main(sys.argv[1:])
+
+	try:
+		main(sys.argv[1:])
+	except KeyboardInterrupt:
+		print('\n\n/!\ Keyboard Interrupt')
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os._exit(0)
