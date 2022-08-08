@@ -12,12 +12,13 @@ from datetime import datetime
 from concurrent.futures import as_completed
 from smb.SMBConnection import SMBConnection
 from requests_futures.sessions import FuturesSession
+from scapy import *
 
 socket.setdefaulttimeout(15)
 
 openPorts = []
 services = { 0: 'unknown', 1: 'TCPMUX', 5: 'RJE', 7: 'ECHO', 18: 'MSP', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 29: 'MSG ICP', 37: 'Time', 42: 'Nameserv', 53: 'DNS', 69: 'TFTP', 80: 'HTTP', 110: 'POP3', 115: "SFTP", 139: 'NetBIOS', 143: 'IMAP', 156: 'SQL Server', 161: 'SNMP', 194: 'IRC', 389: 'LDAP', 443: 'HTTPS', 445: 'SMB', 3389: 'RDP'}
-bannerPayloads = { 'HTTP': ['GET / HTTP/1.1\r\nHost: www.host.com\r\n\r\n'], 'SSH': [''], 'FTP': [''], 'POP3': [''] }
+bannerPayloads = { 'HTTP': ['GET / HTTP/1.1\r\nHost: www.host.com\r\n\r\n',], 'SSH': [''], 'FTP': [''], 'POP3': [''] }
 aggressivePayloads = { 'HTTP': ['GET /enum_dir HTTP/1.1\r\nHost: www.host.com\r\n\r\n'], 'SMB': ['SMB'], 'FTP': ['\r\n', 'USER anonymous\r\n', 'PASS anonymous\r\n'], 'POP3': ['', 'USER root\r\n', 'PASS root\r\n'] }
 enum_dirList = open('./dicts/enum_dir.txt', "r").read().splitlines()
 enum_userList = open('./dicts/enum_user.txt', "r").read().splitlines()
@@ -183,7 +184,7 @@ def scanWebDir():
 		sys.stdout.write('\b')
 
 		resp = future.result()
-		if resp.status_code == 200 or resp.status_code == 403 or resp.status_code == 301:
+		if resp.status_code == 200 or resp.status_code == 301:
 			resp.request.url = resp.request.url.replace(protocol + '://' + target + '/', '')
 			print(f'-	{protocol.upper()} {bcolors.OKGREEN + str(resp.status_code) if resp.status_code == 200 else bcolors.WARNING + str(resp.status_code)}{bcolors.ENDC} ( GET /{resp.request.url} )')
 
@@ -195,7 +196,6 @@ def scanAggressively():
 		if (aggressivePayloads.get(services.get(port, 'none'), 'none') != 'none'):
 			payloads = aggressivePayloads.get(services.get(port))
 
-			sys.stdout.write('\033[A')
 			print(f'Port {bcolors.BOLD + str(port) + bcolors.ENDC} | {bcolors.OKBLUE + services.get(port) + bcolors.ENDC}')
 			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 			       
@@ -259,10 +259,22 @@ def bannerGrab():
 						payload = payload.replace("www.host.com", target)
 						
 						s.send(str.encode(payload))
-						response = s.recv(1024).decode("utf-8").strip().replace("\n", "\n-	")
+						response = s.recv(1024).decode("utf-8").strip()
 						payload = payload.replace("\n", " ").replace("\r", "")
 
-						print(f'-	{os.linesep.join(response.split(os.linesep)[:7])}')
+						if(services.get(port, 'none') == 'HTTP' or services.get(port, 'none') == 'HTTPS'):
+							http_header = [line for line in response.split('\n') if "HTTP/1.1" in line]
+							http_server = [line for line in response.split('\n') if "Server:" in line]
+							http_title = [line for line in response.split('\n') if "<title>" in line]
+
+							print(f'-	{http_header[0].strip()}')
+
+							print(f'-	{http_server[0].strip()}')
+
+							if len(http_title) > 0:
+								print(f'-	{http_title[0].strip().replace("<title>", "").replace("</title>", "")}')
+						else:
+							print(f'-	{os.linesep.join(response.split(os.linesep)[:7])}')
 
 				except Exception as e:
 					print(f'-	{e}')
