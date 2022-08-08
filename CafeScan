@@ -188,46 +188,9 @@ def startScan():
 		for port in openPorts:
 			if hostServices.get(port, 'none') == 'HTTP':
 				print(f"Port {bcolors.BOLD + str(port) + bcolors.ENDC}")
-				scanWebDir('http', 80)
+				scanWebDir('http', port)
 
 		print("-" * 50)
-
-def detectService(port):
-	global hostServices
-	global socket
-
-	socket.setdefaulttimeout(0.5)
-	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-			       
-		s.connect((target, port))
-
-		for service in bannerPayloads:
-
-			try:
-
-				# Try to grab banner/info
-				for payload in bannerPayloads[service]:
-					payload = payload.replace("www.host.com", target)
-						
-					s.send(str.encode(payload))
-					response = s.recv(1024).decode("utf-8").strip()
-
-					if 'HTTP' in response.upper():
-						hostServices[port] = 'HTTP'
-					elif 'FTP' in response.upper():
-						hostServices[port] = 'FTP'
-					elif 'SSH' in response.upper():
-						hostServices[port] = 'SSH'
-
-					if hostServices[port] != 'unknown':
-						break
-
-				if hostServices[port] != 'unknown':
-						break
-
-			except Exception as e:
-				pass
-
 
 def scanWebDir(protocol, port):
 
@@ -363,6 +326,42 @@ def bannerGrab():
 				except Exception as e:
 					print(f'-	{e}')
 					pass
+
+def detectService(port):
+	global hostServices
+	global socket
+
+	socket.setdefaulttimeout(0.5)
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+			       
+		s.connect((target, port))
+
+		for service in bannerPayloads:
+
+			try:
+
+				# Try to grab banner/info
+				for payload in bannerPayloads[service]:
+					payload = payload.replace("www.host.com", target)
+						
+					s.send(str.encode(payload))
+					response = s.recv(1024).decode("utf-8").strip()
+
+					if 'HTTP' in response.upper():
+						hostServices[port] = 'HTTP'
+					elif 'FTP' in response.upper():
+						hostServices[port] = 'FTP'
+					elif 'SSH' in response.upper():
+						hostServices[port] = 'SSH'
+
+					if hostServices[port] != 'unknown':
+						break
+
+				if hostServices[port] != 'unknown':
+						break
+
+			except Exception as e:
+				pass
 
 def scanPort(port):
 	
