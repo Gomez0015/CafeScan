@@ -8,6 +8,11 @@ index.jsp
 assets/
 wp-admin/
 robots.txt
+blog/
+sitemap
+rss
+tags
+categories
 !.gitignore
 !.htaccess
 !.htpasswd
