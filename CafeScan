@@ -61,8 +61,8 @@ def printHelp():
 	print(f'\n{bcolors.UNDERLINE}SCAN SPECIFICATION:{bcolors.ENDC}')
 	print(f'	{bcolors.OKBLUE}--gb, --grab-banners {bcolors.ENDC}# Try To Grab Service Banners')
 	print(f'	{bcolors.OKBLUE}--gbc, --grab-banners-cve {bcolors.ENDC}# Try To Grab Service Banners & Look for Possible CVE(s)')
-	print(f'	{bcolors.OKBLUE}--sa, --scan-aggressive {bcolors.ENDC}# Scan Aggressively')
-	print(f'	{bcolors.OKBLUE}--sw, --scan-webdir {bcolors.ENDC}# Scan Web Directories/Paths')
+	print(f'	{bcolors.OKBLUE}--as, --scan-aggressive {bcolors.ENDC}# Aggressive Scan')
+	print(f'	{bcolors.OKBLUE}--ws, --scan-webdir {bcolors.ENDC}# Web Directories/Paths Scan')
 	sys.exit()
 
 # Main function
@@ -74,7 +74,7 @@ def main(argv):
 
 	try:
 		# Define CLI arguments
-		opts, args = getopt.getopt(argv,"hi:p:at",["help", "ports=","ip-address=","all-ports","top-ports", "grab-banners", "gb", "grab-banners-cve", "gbc", "sa", "scan-webdir", "sw"])
+		opts, args = getopt.getopt(argv,"hi:p:at",["help", "ports=","ip-address=","all-ports","top-ports", "grab-banners", "gb", "grab-banners-cve", "gbc", "as", "scan-webdir", "ws"])
 	except getopt.GetoptError:
 		printHelp()
 
@@ -105,11 +105,11 @@ def main(argv):
 		elif opt in ("--gb", "--grab-banners"):
 			grabBanners = True
 		
-		elif opt in ("--sa", "--scan-aggressive"):
+		elif opt in ("--as", "--scan-aggressive"):
 			global aggressiveScan
 			aggressiveScan = True
 
-		elif opt in ("--sw", "--scan-webdir"):
+		elif opt in ("--ws", "--scan-webdir"):
 			global webDirScan
 			webDirScan = True
 
