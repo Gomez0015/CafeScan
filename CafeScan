@@ -20,10 +20,10 @@ openPorts = []
 services = { 0: 'unknown', 1: 'TCPMUX', 5: 'RJE', 7: 'ECHO', 18: 'MSP', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 29: 'MSG ICP', 37: 'Time', 42: 'Nameserv', 53: 'DNS', 69: 'TFTP', 80: 'HTTP', 110: 'POP3', 115: "SFTP", 139: 'NetBIOS', 143: 'IMAP', 156: 'SQL Server', 161: 'SNMP', 194: 'IRC', 389: 'LDAP', 443: 'HTTPS', 445: 'SMB', 3389: 'RDP'}
 bannerPayloads = { 'SSH': [' '], 'HTTP': ['GET / HTTP/1.1\r\nHost: www.host.com\r\n\r\n',], 'FTP': [' '], 'POP3': [' '] }
 aggressivePayloads = { 'HTTP': ['GET /enum_dir HTTP/1.1\r\nHost: www.host.com\r\n\r\n'], 'SMB': ['SMB'], 'FTP': ['\r\n', 'USER anonymous\r\n', 'PASS anonymous\r\n'], 'POP3': ['', 'USER root\r\n', 'PASS root\r\n'] }
-enum_dirList = open('./dicts/enum_dir.txt', "r").read().splitlines()
-enum_userList = open('./dicts/enum_user.txt', "r").read().splitlines()
-enum_passList = open('./dicts/enum_pass.txt', "r").read().splitlines()
-enum_dirListBig = open('./dicts/enum_dirBig.txt', "r").read().splitlines()
+enum_dirList = open('/usr/share/CafeScan/dicts/enum_dir.txt', "r").read().splitlines()
+enum_userList = open('/usr/share/CafeScan/dicts/enum_user.txt', "r").read().splitlines()
+enum_passList = open('/usr/share/CafeScan/dicts/enum_pass.txt', "r").read().splitlines()
+enum_dirListBig = open('/usr/share/CafeScan/dicts/enum_dirBig.txt', "r").read().splitlines()
 hostServices = {}
 
 # User Options

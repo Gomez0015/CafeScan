@@ -17,6 +17,8 @@ mv dicts /usr/share/CafeScan/
 
 chmod +x ./CafeScan
 
+rm /usr/bin/CafeScan
+
 mv ./CafeScan /usr/bin/
 
 cd ..
