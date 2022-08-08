@@ -20,7 +20,7 @@ socket.setdefaulttimeout(5)
 
 openPorts = []
 services = { 0: 'unknown', 1: 'TCPMUX', 5: 'RJE', 7: 'ECHO', 18: 'MSP', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 29: 'MSG ICP', 37: 'Time', 42: 'Nameserv', 53: 'DNS', 69: 'TFTP', 80: 'HTTP', 110: 'POP3', 115: "SFTP", 139: 'NetBIOS', 143: 'IMAP', 156: 'SQL Server', 161: 'SNMP', 194: 'IRC', 389: 'LDAP', 443: 'HTTPS', 445: 'SMB', 3389: 'RDP'}
-bannerPayloads = { 'SSH': [' '], 'HTTP': ['GET / HTTP/1.1\r\nHost: www.host.com\r\n\r\n',], 'FTP': [' '], 'POP3': [' '] }
+bannerPayloads = { 'SSH': [' '], 'HTTP': ['GET / HTTP/1.1\r\nHost: www.host.com\r\n\r\n',], 'FTP': [' '], 'POP3': [' '], 'SMB': ['SMB'] }
 aggressivePayloads = { 'HTTP': ['GET /enum_dir HTTP/1.1\r\nHost: www.host.com\r\n\r\n'], 'SMB': ['SMB'], 'FTP': ['\r\n', 'USER anonymous\r\n', 'PASS anonymous\r\n'], 'POP3': ['', 'USER root\r\n', 'PASS root\r\n'] }
 enum_dirList = open('/usr/share/CafeScan/dicts/enum_dir.txt', "r").read().splitlines()
 enum_userList = open('/usr/share/CafeScan/dicts/enum_user.txt', "r").read().splitlines()
@@ -316,12 +316,13 @@ def bannerGrab():
 
 					for payload in payloads:
 						payload = payload.replace("www.host.com", target)
-						
-						s.send(str.encode(payload))
-						response = s.recv(1024).decode("utf-8").strip()
-						payload = payload.replace("\n", " ").replace("\r", "")
+
 
 						if(hostServices.get(port, 'none') == 'HTTP' or hostServices.get(port, 'none') == 'HTTPS'):
+							s.send(str.encode(payload))
+							response = s.recv(1024).decode("utf-8").strip()
+							payload = payload.replace("\n", " ").replace("\r", "")
+
 							http_header = [line for line in response.split('\n') if "HTTP/1.1" in line]
 							http_server = [line for line in response.split('\n') if "Server:" in line]
 							http_title = [line for line in response.split('\n') if "<title>" in line]
@@ -347,7 +348,12 @@ def bannerGrab():
 									if(len(detectedCVEList) > 0):
 										print(detectedCVEList)
 
+						elif('SMB' in payload):
+							smbGrabBanner()
 						else:
+							s.send(str.encode(payload))
+							response = s.recv(1024).decode("utf-8").strip()
+							payload = payload.replace("\n", " ").replace("\r", "")
 							print(f'-	{os.linesep.join(response.split(os.linesep)[:7])}')
 							if cveScan == True:
 								cveResults = nvdlib.searchCVE(keyword=os.linesep.join(response.split(os.linesep)[:1]))
@@ -375,9 +381,18 @@ def smbListShares():
      if smbClient.connect(target, 139):
          for share in smbClient.listShares():
              print(f"-	{share.name} # {share.comments}")
-         return True
-     else:
-         return False
+
+def smbGrabBanner():
+	smbClient = SMBConnection('', '', target, "")
+	if smbClient.connect(target, 139):
+		for share in smbClient.listShares():
+			if(share.name == "IPC$"):
+				print(f"-	{share.comments.replace('IPC Service ', '').replace('(', '').replace(')', '')}")
+
+				if cveScan == True:
+					cveResults = nvdlib.searchCVE(keyword=share.comments.replace('IPC Service ', '').replace('(', '').replace(')', '').replace('-', ' '))
+					if(len(cveResults) > 0):
+						print(f'-	CVE Detected: {bcolors.HEADER + cveResults[0].id + bcolors.ENDC}')
 
 def checkHostReachable(): 	
 
