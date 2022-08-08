@@ -198,7 +198,10 @@ def scanWebDir(protocol, port):
 
 	session = FuturesSession()
 
-	futures=[session.get(f'{protocol}://{target}:{port}/{dir}') for dir in enum_dirListBig]
+	try:
+		futures=[session.get(f'{protocol}://{target}:{port}/{dir}', allow_redirects=False) for dir in enum_dirListBig]
+	except:
+		print(f'-	An Error Occured, Stopping Enumeration')
 
 	for future in as_completed(futures):
 
@@ -208,6 +211,7 @@ def scanWebDir(protocol, port):
 
 		resp = future.result()
 		if resp.status_code == 200 or resp.status_code == 301:
+			resp.request.url = resp.request.url.replace(f'{protocol}://{target}:{port}/', '')
 			print(f'-	{protocol.upper()} {bcolors.OKGREEN + str(resp.status_code) if resp.status_code == 200 else bcolors.WARNING + str(resp.status_code)}{bcolors.ENDC} ( GET /{resp.request.url} )')
 
 def scanAggressively():
@@ -255,7 +259,6 @@ def scanAggressively():
 							print(f'-	{response} ( {payload.strip()} )')
 
 				except Exception as e:
-					print(f'-	{e}')
 					pass
 
 def bannerGrab():
@@ -307,8 +310,7 @@ def bannerGrab():
 									for cve in cveResults:
 										detectedCVEList += f'{bcolors.HEADER + cve.id + bcolors.ENDC}, '
 
-
-									if(len(detectedCVEList) > 0):
+									if(len(cveResults) > 0):
 										print(detectedCVEList)
 
 						elif('SMB' in payload):
