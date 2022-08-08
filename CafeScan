@@ -13,6 +13,7 @@ from concurrent.futures import as_completed
 from smb.SMBConnection import SMBConnection
 from requests_futures.sessions import FuturesSession
 from scapy import *
+import nvdlib
 
 socket.setdefaulttimeout(5)
 
@@ -319,9 +320,17 @@ def bannerGrab():
 								print(f'-	{http_server[0].strip()}')
 
 							if len(http_title) > 0:
-								print(f'-	{http_title[0].strip().replace("<title>", "").replace("</title>", "")}')
+								http_title[0] = http_title[0].strip().replace("<title>", "").replace("</title>", "")
+								print(f'-	{http_title[0]}')
+								cveResults = nvdlib.searchCVE(keyword=http_title[0].replace('/', ' '))
+								if(len(cveResults) > 0):
+									print(f'-	CVE Detected: {bcolors.HEADER + cveResults[0].id + bcolors.ENDC}')
+
 						else:
 							print(f'-	{os.linesep.join(response.split(os.linesep)[:7])}')
+							cveResults = nvdlib.searchCVE(keyword=os.linesep.join(response.split(os.linesep)[:1]))
+							if(len(cveResults) > 0):
+								print(f'-	CVE Detected: {bcolors.HEADER + cveResults[0].id + bcolors.ENDC}')
 
 				except Exception as e:
 					print(f'-	{e}')
