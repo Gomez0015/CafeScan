@@ -1,3 +1,5 @@
+offline/
+sitemap_xml/
 home/
 fuel/
 index.php
