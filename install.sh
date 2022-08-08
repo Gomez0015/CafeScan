@@ -5,6 +5,10 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+mkdir tmp
+
+cd tmp
+
 git clone https://github.com/Gomez0015/CafeScan.git
 
 cd CafeScan
@@ -21,8 +25,8 @@ rm /usr/bin/CafeScan
 
 mv ./CafeScan /usr/bin/
 
-cd ..
+cd ../../
 
-rm -r CafeScan
+rm -r tmp
 
 echo 'Done!'
