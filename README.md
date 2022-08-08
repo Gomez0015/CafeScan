@@ -22,3 +22,4 @@ PORT SPECIFICATION:
 SCAN SPECIFICATION:
 	--gb, --grab-banners # Try To Grab Service Banners
 	--sa, --scan-aggressive # Scan Aggressively
+	--sw, --scan-webdir # Scan Web Directories/Paths
