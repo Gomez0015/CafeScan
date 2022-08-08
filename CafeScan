@@ -1,11 +1,11 @@
+#!/usr/bin/env python
+
 # Coded by Raxo (https://github.com/Gomez0015)
 
 # LEGAL DISCLAIMER
 
 # we are not responsible for any illegal use of this tool
 # it was made for learning purposes only.
-
-#!/usr/bin/python
 
 import sys, getopt, socket, concurrent.futures, os, time, smb, requests, requests_futures
 from datetime import datetime
