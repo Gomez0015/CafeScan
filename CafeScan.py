@@ -14,16 +14,17 @@ from smb.SMBConnection import SMBConnection
 from requests_futures.sessions import FuturesSession
 from scapy import *
 
-socket.setdefaulttimeout(15)
+socket.setdefaulttimeout(5)
 
 openPorts = []
 services = { 0: 'unknown', 1: 'TCPMUX', 5: 'RJE', 7: 'ECHO', 18: 'MSP', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 29: 'MSG ICP', 37: 'Time', 42: 'Nameserv', 53: 'DNS', 69: 'TFTP', 80: 'HTTP', 110: 'POP3', 115: "SFTP", 139: 'NetBIOS', 143: 'IMAP', 156: 'SQL Server', 161: 'SNMP', 194: 'IRC', 389: 'LDAP', 443: 'HTTPS', 445: 'SMB', 3389: 'RDP'}
-bannerPayloads = { 'HTTP': ['GET / HTTP/1.1\r\nHost: www.host.com\r\n\r\n',], 'SSH': [''], 'FTP': [''], 'POP3': [''] }
+bannerPayloads = { 'SSH': [' '], 'HTTP': ['GET / HTTP/1.1\r\nHost: www.host.com\r\n\r\n',], 'FTP': [' '], 'POP3': [' '] }
 aggressivePayloads = { 'HTTP': ['GET /enum_dir HTTP/1.1\r\nHost: www.host.com\r\n\r\n'], 'SMB': ['SMB'], 'FTP': ['\r\n', 'USER anonymous\r\n', 'PASS anonymous\r\n'], 'POP3': ['', 'USER root\r\n', 'PASS root\r\n'] }
 enum_dirList = open('./dicts/enum_dir.txt', "r").read().splitlines()
 enum_userList = open('./dicts/enum_user.txt', "r").read().splitlines()
 enum_passList = open('./dicts/enum_pass.txt', "r").read().splitlines()
 enum_dirListBig = open('./dicts/enum_dirBig.txt', "r").read().splitlines()
+hostServices = {}
 
 # User Options
 grabBanners = False
@@ -31,7 +32,6 @@ aggressiveScan = False
 webDirScan = False
 target = ''
 ports = ''
-protocol = ''
 
 class bcolors:
     HEADER = '\033[95m'
@@ -109,6 +109,7 @@ def main(argv):
 def startScan():
 	global ports
 	global openPorts
+	global hostServices
 
 	# Print banner
 	print("-" * 50)
@@ -147,7 +148,11 @@ def startScan():
 			for port, is_open in zip(portChunk, results):
 
 				if is_open:
-					print(f'Port {bcolors.BOLD}{port}{bcolors.ENDC} {bcolors.OKGREEN}open{bcolors.ENDC} | {bcolors.OKBLUE + services.get(port, "unknown") if services.get(port, "unknown") != "unknown" else bcolors.FAIL + services.get(port, "unknown") }{bcolors.ENDC}')
+					hostServices[port] = services.get(port, "unknown")
+					if(services.get(port, 'unknown') == 'unknown'):
+						detectService(port)
+
+					print(f'Port {bcolors.BOLD}{port}{bcolors.ENDC} {bcolors.OKGREEN}open{bcolors.ENDC} | {bcolors.OKBLUE + hostServices[port] if hostServices[port] != "unknown" else bcolors.FAIL + hostServices[port] }{bcolors.ENDC}')
 					openPorts.append(port)
 
 	print("-" * 50)
@@ -164,18 +169,59 @@ def startScan():
 
 	if(webDirScan == True):
 		print(f"{bcolors.UNDERLINE}Starting Web Directory/Path Scan{bcolors.ENDC}\n")
-		global protocol
-		protocol = 'http'
-		scanWebDir()
+
+
+		for port in openPorts:
+			if hostServices.get(port, 'none') == 'HTTP':
+				print(f"Port {bcolors.BOLD + str(port) + bcolors.ENDC}")
+				scanWebDir('http', 80)
+
 		print("-" * 50)
 
-def scanWebDir():
+def detectService(port):
+	global hostServices
+	global socket
+
+	socket.setdefaulttimeout(0.5)
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+			       
+		s.connect((target, port))
+
+		for service in bannerPayloads:
+
+			try:
+
+				# Try to grab banner/info
+				for payload in bannerPayloads[service]:
+					payload = payload.replace("www.host.com", target)
+						
+					s.send(str.encode(payload))
+					response = s.recv(1024).decode("utf-8").strip()
+
+					if 'HTTP' in response.upper():
+						hostServices[port] = 'HTTP'
+					elif 'FTP' in response.upper():
+						hostServices[port] = 'FTP'
+					elif 'SSH' in response.upper():
+						hostServices[port] = 'SSH'
+
+					if hostServices[port] != 'unknown':
+						break
+
+				if hostServices[port] != 'unknown':
+						break
+
+			except Exception as e:
+				pass
+
+
+def scanWebDir(protocol, port):
 
 	loader = loading_cursor()
 
 	session = FuturesSession()
 
-	futures=[session.get(f'{protocol}://{target}/{dir}') for dir in enum_dirListBig]
+	futures=[session.get(f'{protocol}://{target}:{port}/{dir}') for dir in enum_dirListBig]
 
 	for future in as_completed(futures):
 
@@ -185,7 +231,6 @@ def scanWebDir():
 
 		resp = future.result()
 		if resp.status_code == 200 or resp.status_code == 301:
-			resp.request.url = resp.request.url.replace(protocol + '://' + target + '/', '')
 			print(f'-	{protocol.upper()} {bcolors.OKGREEN + str(resp.status_code) if resp.status_code == 200 else bcolors.WARNING + str(resp.status_code)}{bcolors.ENDC} ( GET /{resp.request.url} )')
 
 def scanAggressively():
@@ -193,10 +238,10 @@ def scanAggressively():
 
 	for port in openPorts:
 
-		if (aggressivePayloads.get(services.get(port, 'none'), 'none') != 'none'):
-			payloads = aggressivePayloads.get(services.get(port))
+		if (aggressivePayloads.get(hostServices.get(port, 'none'), 'none') != 'none'):
+			payloads = aggressivePayloads.get(hostServices.get(port))
 
-			print(f'Port {bcolors.BOLD + str(port) + bcolors.ENDC} | {bcolors.OKBLUE + services.get(port) + bcolors.ENDC}')
+			print(f'Port {bcolors.BOLD + str(port) + bcolors.ENDC} | {bcolors.OKBLUE + hostServices.get(port) + bcolors.ENDC}')
 			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 			       
 				try:
@@ -245,10 +290,10 @@ def bannerGrab():
 		sys.stdout.flush()
 		sys.stdout.write('\b')
 
-		if (bannerPayloads.get(services.get(port, 'none'), 'none') != 'none'):
-			payloads = bannerPayloads.get(services.get(port))
+		if (bannerPayloads.get(hostServices.get(port, 'none'), 'none') != 'none'):
+			payloads = bannerPayloads.get(hostServices.get(port))
 
-			print(f'Port {bcolors.BOLD + str(port) + bcolors.ENDC} | {bcolors.OKBLUE + services.get(port) + bcolors.ENDC}')
+			print(f'Port {bcolors.BOLD + str(port) + bcolors.ENDC} | {bcolors.OKBLUE + hostServices.get(port) + bcolors.ENDC}')
 			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 			       
 				try:
@@ -262,14 +307,16 @@ def bannerGrab():
 						response = s.recv(1024).decode("utf-8").strip()
 						payload = payload.replace("\n", " ").replace("\r", "")
 
-						if(services.get(port, 'none') == 'HTTP' or services.get(port, 'none') == 'HTTPS'):
+						if(hostServices.get(port, 'none') == 'HTTP' or hostServices.get(port, 'none') == 'HTTPS'):
 							http_header = [line for line in response.split('\n') if "HTTP/1.1" in line]
 							http_server = [line for line in response.split('\n') if "Server:" in line]
 							http_title = [line for line in response.split('\n') if "<title>" in line]
 
-							print(f'-	{http_header[0].strip()}')
+							if len(http_header) > 0:
+								print(f'-	{http_header[0].strip()}')
 
-							print(f'-	{http_server[0].strip()}')
+							if len(http_server) > 0:
+								print(f'-	{http_server[0].strip()}')
 
 							if len(http_title) > 0:
 								print(f'-	{http_title[0].strip().replace("<title>", "").replace("</title>", "")}')
