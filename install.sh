@@ -13,6 +13,8 @@ git clone https://github.com/Gomez0015/CafeScan.git
 
 cd CafeScan
 
+pip install -r ./requirements.txt
+
 rm -r /usr/share/CafeScan
 
 mkdir /usr/share/CafeScan
