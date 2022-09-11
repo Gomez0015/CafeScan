@@ -21,11 +21,11 @@ mkdir /usr/share/CafeScan
 
 mv dicts /usr/share/CafeScan/
 
-chmod +x ./CafeScan
+chmod +x ./CafeScan.py
 
 rm /usr/bin/CafeScan
 
-mv ./CafeScan /usr/bin/
+mv ./CafeScan.py /usr/bin/CafeScan
 
 cd ../../
 
